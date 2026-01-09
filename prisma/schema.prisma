@@ -1,0 +1,73 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  USER
+}
+
+model User {
+  id           String   @id @default(cuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  role         Role     @default(USER)
+  createdAt    DateTime @default(now())
+}
+
+model Shop {
+  id          String   @id @default(cuid())
+  shopDomain  String   @unique
+  accessToken String
+  scopes      String
+  installedAt DateTime @default(now())
+  products    Product[]
+  orders      Order[]
+  webhookEvents WebhookEvent[]
+}
+
+model Product {
+  id              String   @id @default(cuid())
+  shopifyId       String
+  shopId          String
+  shop            Shop     @relation(fields: [shopId], references: [id])
+  title           String
+  status          String?
+  vendor          String?
+  createdAtShopify DateTime?
+  updatedAtShopify DateTime?
+  updatedAtLocal  DateTime @default(now())
+
+  @@unique([shopId, shopifyId])
+}
+
+model Order {
+  id              String   @id @default(cuid())
+  shopifyId       String
+  shopId          String
+  shop            Shop     @relation(fields: [shopId], references: [id])
+  name            String?
+  totalPrice      String?
+  currency        String?
+  financialStatus String?
+  createdAtShopify DateTime?
+  updatedAtShopify DateTime?
+  updatedAtLocal  DateTime @default(now())
+
+  @@unique([shopId, shopifyId])
+}
+
+model WebhookEvent {
+  id         String   @id @default(cuid())
+  shopId     String
+  shop       Shop     @relation(fields: [shopId], references: [id])
+  topic      String
+  payloadJson Json
+  receivedAt DateTime @default(now())
+}

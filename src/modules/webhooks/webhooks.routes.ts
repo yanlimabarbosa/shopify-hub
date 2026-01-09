@@ -1,0 +1,11 @@
+import { Router } from "express";
+import { requireAuth } from "../../middlewares/requireAuth.js";
+import { requireRole } from "../../middlewares/requireRole.js";
+import { registerWebhooks, receiveWebhook } from "./webhooks.controller.js";
+
+export const webhooksRouter = Router();
+
+webhooksRouter.post("/register", requireAuth, requireRole("ADMIN"), registerWebhooks);
+
+// IMPORTANT: this should use raw body parser for HMAC validation
+webhooksRouter.post("/shopify", receiveWebhook);
