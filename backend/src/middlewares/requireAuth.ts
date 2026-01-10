@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import { verifyToken } from "../utils/jwt.js";
-import { UnauthorizedError } from "../shared/errors/AuthErrors.js";
+import { UnauthorizedError } from "../shared/errors/auth-errors.js";
 import { logger } from "../utils/logger.js";
 
 export type AuthedRequest = Request & { user?: { id: string; role: "ADMIN" | "USER" } };

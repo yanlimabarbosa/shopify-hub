@@ -1,4 +1,4 @@
-import { AppError } from "./AppError.js";
+import { AppError } from "./app-error.js";
 import { ZodError, ZodIssue } from "zod";
 
 export class ValidationError extends AppError {

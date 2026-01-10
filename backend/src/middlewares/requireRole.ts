@@ -1,6 +1,6 @@
 import { Response, NextFunction } from "express";
 import { AuthedRequest } from "./requireAuth.js";
-import { UnauthorizedError, ForbiddenError } from "../shared/errors/AuthErrors.js";
+import { UnauthorizedError, ForbiddenError } from "../shared/errors/auth-errors.js";
 
 export function requireRole(...roles: Array<"ADMIN" | "USER">) {
   return (req: AuthedRequest, res: Response, next: NextFunction) => {

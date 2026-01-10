@@ -6,10 +6,10 @@ export const prisma = new PrismaClient({
   log:
     env.NODE_ENV === "development"
       ? [
-          { level: "query", emit: "event" },
-          { level: "error", emit: "event" },
-          { level: "warn", emit: "event" },
-        ]
+        { level: "query", emit: "event" },
+        { level: "error", emit: "event" },
+        { level: "warn", emit: "event" },
+      ]
       : [{ level: "error", emit: "event" }],
 });
 
@@ -27,7 +27,6 @@ prisma.$on("warn", (e) => {
   logger.warn({ message: e.message }, "Prisma warning");
 });
 
-// Graceful shutdown
 process.on("beforeExit", async () => {
   await prisma.$disconnect();
   logger.info("Prisma client disconnected");

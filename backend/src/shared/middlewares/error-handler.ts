@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import { ZodError } from "zod";
-import { AppError } from "../errors/AppError.js";
-import { ValidationError } from "../errors/ValidationError.js";
+import { AppError } from "../errors/app-error.js";
+import { ValidationError } from "../errors/validation-error.js";
 import { logger } from "../../utils/logger.js";
 import { env } from "../../config/env.js";
 
@@ -44,7 +44,6 @@ export function errorHandler(
     });
   }
 
-  // Log error with full details
   logger.error(
     {
       error: error.message,

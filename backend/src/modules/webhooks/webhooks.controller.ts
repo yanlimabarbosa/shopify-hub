@@ -1,18 +1,19 @@
 import { Request, Response } from "express";
 import { webhooksService } from "./webhooks.service.js";
-import { WebhookValidationError } from "../../shared/errors/ShopifyErrors.js";
+import { WebhookValidationError } from "../../shared/errors/shopify-errors.js";
 import { logger } from "../../utils/logger.js";
-import type { ShopifyWebhookPayload } from "./webhooks.types.js";
-
-function getStringValue(value: unknown): string | undefined {
-  if (typeof value === "string") {
-    return value;
-  }
-  return undefined;
-}
+import { safeJsonParse } from "../../utils/axios-error-handler.js";
+import {
+  registerWebhooksBodySchema,
+  registerWebhooksQuerySchema,
+  webhookHeadersSchema,
+  type ShopifyWebhookPayload,
+} from "./webhooks.types.js";
 
 export async function registerWebhooks(req: Request, res: Response): Promise<Response> {
-  const shopDomain = getStringValue(req.body?.shop) || getStringValue(req.query?.shop) || undefined;
+  const bodyResult = registerWebhooksBodySchema.safeParse(req.body);
+  const queryResult = registerWebhooksQuerySchema.safeParse(req.query);
+  const shopDomain = bodyResult.data?.shop || queryResult.data?.shop || undefined;
 
   const results = await webhooksService.registerWebhooks(shopDomain);
 
@@ -41,9 +42,19 @@ export async function receiveWebhook(req: Request, res: Response): Promise<Respo
     throw new WebhookValidationError("Raw body is required for HMAC validation");
   }
 
-  const hmac = getStringValue(req.headers["x-shopify-hmac-sha256"]);
-  const topic = getStringValue(req.headers["x-shopify-topic"]);
-  const shopDomain = getStringValue(req.headers["x-shopify-shop-domain"]);
+  const headersResult = webhookHeadersSchema.safeParse({
+    "x-shopify-hmac-sha256": req.headers["x-shopify-hmac-sha256"],
+    "x-shopify-topic": req.headers["x-shopify-topic"],
+    "x-shopify-shop-domain": req.headers["x-shopify-shop-domain"],
+  });
+
+  if (!headersResult.success) {
+    logger.warn({ issues: headersResult.error.issues }, "Missing required webhook headers");
+    throw new WebhookValidationError("Missing required webhook headers");
+  }
+
+  const { "x-shopify-hmac-sha256": hmac, "x-shopify-topic": topic, "x-shopify-shop-domain": shopDomain } =
+    headersResult.data;
 
   logger.debug(
     {
@@ -54,25 +65,18 @@ export async function receiveWebhook(req: Request, res: Response): Promise<Respo
     "Webhook headers received"
   );
 
-  if (!hmac || !topic || !shopDomain) {
-    logger.warn({ hmac: !!hmac, topic: !!topic, shopDomain: !!shopDomain }, "Missing required webhook headers");
-    throw new WebhookValidationError("Missing required webhook headers");
-  }
-
   logger.debug("Validating HMAC");
   webhooksService.validateHmac(rawBody, hmac);
   logger.debug("HMAC validation passed");
 
   let payload: unknown;
   try {
-    payload = JSON.parse(rawBody);
+    payload = safeJsonParse(rawBody, "Invalid JSON payload");
     logger.debug("Payload parsed successfully");
   } catch (error) {
-    logger.error({ error }, "Invalid JSON payload");
     throw new WebhookValidationError("Invalid JSON payload");
   }
 
-  // Validate payload structure using Zod
   const { shopifyWebhookPayloadSchema } = await import("./webhooks.types.js");
   const validationResult = shopifyWebhookPayloadSchema.safeParse(payload);
 

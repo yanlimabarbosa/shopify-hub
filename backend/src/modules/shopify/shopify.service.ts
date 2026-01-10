@@ -6,9 +6,10 @@ import {
   ShopifyAPIError,
   ShopNotFoundError,
   MissingShopifyCredentialsError,
-} from "../../shared/errors/ShopifyErrors.js";
+} from "../../shared/errors/shopify-errors.js";
 import { logger } from "../../utils/logger.js";
 import { env } from "../../config/env.js";
+import { handleAxiosError } from "../../utils/axios-error-handler.js";
 import type {
   AuthStartInput,
   AuthCallbackInput,
@@ -77,13 +78,7 @@ export class ShopifyService {
       logger.info({ shopDomain: shop, scopes: scope }, "OAuth completed successfully");
       return savedShop;
     } catch (error) {
-      if (axios.isAxiosError(error)) {
-        const errorMessage = error.response?.data?.error || error.message || "Failed to exchange OAuth code";
-        logger.error({ error: errorMessage, shop }, "OAuth failed");
-        throw new ShopifyOAuthError(errorMessage);
-      }
-      logger.error({ error, shop }, "Unexpected error during OAuth");
-      throw error;
+      return handleAxiosError(error, "OAuth", ShopifyOAuthError);
     }
   }
 
@@ -114,7 +109,6 @@ export class ShopifyService {
 
       const products = response.data.products || [];
 
-      // Parallelize upserts for better performance
       await Promise.all(
         products.map((product) =>
           shopifyRepository.upsertProduct({
@@ -139,13 +133,7 @@ export class ShopifyService {
         shop: shop.shopDomain,
       };
     } catch (error) {
-      if (axios.isAxiosError(error)) {
-        const errorMessage = `Failed to fetch products: ${error.response?.data?.errors || error.message}`;
-        logger.error({ error: errorMessage, shopDomain: shop.shopDomain }, "Products sync failed");
-        throw new ShopifyAPIError(errorMessage);
-      }
-      logger.error({ error, shopDomain: shop.shopDomain }, "Unexpected error during products sync");
-      throw error;
+      return handleAxiosError(error, "Products sync", ShopifyAPIError);
     }
   }
 
@@ -172,7 +160,6 @@ export class ShopifyService {
 
       const orders = response.data.orders;
 
-      // Parallelize upserts for better performance
       await Promise.all(
         orders.map((order) =>
           shopifyRepository.upsertOrder({
@@ -198,13 +185,7 @@ export class ShopifyService {
         shop: shop.shopDomain,
       };
     } catch (error) {
-      if (axios.isAxiosError(error)) {
-        const errorMessage = `Failed to fetch orders: ${error.response?.data?.errors || error.message}`;
-        logger.error({ error: errorMessage, shopDomain: shop.shopDomain }, "Orders sync failed");
-        throw new ShopifyAPIError(errorMessage);
-      }
-      logger.error({ error, shopDomain: shop.shopDomain }, "Unexpected error during orders sync");
-      throw error;
+      return handleAxiosError(error, "Orders sync", ShopifyAPIError);
     }
   }
 }

@@ -17,7 +17,6 @@ export class ProductsRepository {
       };
     }
 
-    // ✅ Removida validação extra do cursor
     const products = await prisma.product.findMany({
       take: limit + 1,
       cursor: cursor ? { id: cursor } : undefined,

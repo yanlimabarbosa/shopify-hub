@@ -5,9 +5,11 @@ import { webhooksRepository } from "./webhooks.repository.js";
 import {
   ShopNotFoundError,
   WebhookValidationError,
-} from "../../shared/errors/ShopifyErrors.js";
+  WebhookRegistrationError,
+} from "../../shared/errors/shopify-errors.js";
 import { logger } from "../../utils/logger.js";
 import { env } from "../../config/env.js";
+import { handleAxiosError, extractAxiosErrorMessage } from "../../utils/axios-error-handler.js";
 import {
   shopifyWebhooksListResponseSchema,
   shopifyWebhookCreateResponseSchema,
@@ -41,7 +43,6 @@ export class WebhooksService {
       .update(rawBody, "utf8")
       .digest("base64");
 
-    // Timing-safe comparison
     if (!crypto.timingSafeEqual(Buffer.from(calculatedHmac), Buffer.from(hmac))) {
       throw new WebhookValidationError("Invalid HMAC signature");
     }
@@ -97,7 +98,6 @@ export class WebhooksService {
           continue;
         }
 
-        // Create new webhook
         const response = await axios.post(
           `https://${shop.shopDomain}/admin/api/${this.API_VERSION}/webhooks.json`,
           {
@@ -131,23 +131,13 @@ export class WebhooksService {
           webhookId,
         });
       } catch (error) {
-        if (axios.isAxiosError(error)) {
-          const errorMessage =
-            error.response?.data?.errors || error.message || "Failed to register webhook";
-          logger.error({ error: errorMessage, topic, shopDomain: shop.shopDomain }, "Webhook registration failed");
-          results.push({
-            topic,
-            status: "error",
-            error: errorMessage,
-          });
-        } else {
-          logger.error({ error, topic, shopDomain: shop.shopDomain }, "Unknown error during webhook registration");
-          results.push({
-            topic,
-            status: "error",
-            error: "Unknown error",
-          });
-        }
+        const errorMessage = extractAxiosErrorMessage(error, "Failed to register webhook");
+        logger.error({ error: errorMessage, topic, shopDomain: shop.shopDomain }, "Webhook registration failed");
+        results.push({
+          topic,
+          status: "error",
+          error: errorMessage,
+        });
       }
     }
 
@@ -195,7 +185,6 @@ export class WebhooksService {
       logger.error({ error, shopId: shop.id, topic }, "Failed to save webhook event");
     }
 
-    // Process based on topic
     switch (topic) {
       case "products/create":
       case "products/update":
@@ -213,8 +202,8 @@ export class WebhooksService {
   }
 
   private async handleProductWebhook(shopId: string, payload: ShopifyWebhookPayload): Promise<void> {
-    if (!payload.id || !payload.title) {
-      logger.warn({ shopId, payload }, "Invalid product webhook payload");
+    if (!payload.title) {
+      logger.warn({ shopId, payload }, "Invalid product webhook payload: missing title");
       return;
     }
 

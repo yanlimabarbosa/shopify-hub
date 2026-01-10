@@ -54,3 +54,17 @@ export type WebhookEventData = {
   shopDomain: string;
   payload: ShopifyWebhookPayload;
 };
+
+export const registerWebhooksBodySchema = z.object({
+  shop: z.string().optional(),
+});
+
+export const registerWebhooksQuerySchema = z.object({
+  shop: z.string().optional(),
+});
+
+export const webhookHeadersSchema = z.object({
+  "x-shopify-hmac-sha256": z.string(),
+  "x-shopify-topic": z.string(),
+  "x-shopify-shop-domain": z.string(),
+});

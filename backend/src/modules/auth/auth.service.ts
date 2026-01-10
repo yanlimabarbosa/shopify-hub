@@ -5,7 +5,7 @@ import {
   EmailAlreadyExistsError,
   InvalidCredentialsError,
   UserNotFoundError,
-} from "../../shared/errors/AuthErrors.js";
+} from "../../shared/errors/auth-errors.js";
 import type { RegisterInput, LoginInput, UserResponse, LoginResponse } from "./auth.types.js";
 import { logger } from "../../utils/logger.js";
 
