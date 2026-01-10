@@ -5,5 +5,8 @@ import { authStart, authCallback } from "./shopify.controller.js";
 
 export const shopifyRouter = Router();
 
-shopifyRouter.get("/auth", authStart);
+// OAuth start requires ADMIN (connecting a shop is privileged)
+shopifyRouter.get("/auth", requireAuth, requireRole("ADMIN"), authStart);
+
+// Callback is public (Shopify redirects here, validated via OAuth code)
 shopifyRouter.get("/callback", authCallback);

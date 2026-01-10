@@ -1,0 +1,7 @@
+@baseUrl = https://c09f08aae4cb.ngrok-free.app
+@shop = yan-store-8959.myshopify.com
+@token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJjbWs3aWQ3dWEwMDAwMWpoc3pvN2k2bjRiIiwicm9sZSI6IkFETUlOIiwiaWF0IjoxNzY4MDUzMDI3LCJleHAiOjE3NjgwODE4Mjd9.lkLyC_JH0igRwJlMASCeJADM35w4_uuOcxo58IrrXas
+
+### Start OAuth (open in browser)
+GET {{baseUrl}}/shopify/auth?shop={{shop}}
+Authorization: Bearer {{token}}

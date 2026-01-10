@@ -7,7 +7,11 @@ import type { RegisterInput, LoginInput } from "./auth.types.js";
 export async function register(req: Request, res: Response): Promise<Response> {
   const validatedInput: RegisterInput = registerSchema.parse(req.body);
   const user = await authService.register(validatedInput);
-  return res.status(201).json(user);
+  const result = await authService.login({
+    email: validatedInput.email,
+    password: validatedInput.password,
+  });
+  return res.status(201).json({ ...user, token: result.token });
 }
 
 export async function login(req: Request, res: Response): Promise<Response> {
@@ -21,3 +25,4 @@ export async function me(req: AuthedRequest, res: Response): Promise<Response> {
   const user = await authService.getUserProfile(userId);
   return res.json(user);
 }
+
