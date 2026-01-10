@@ -1,11 +1,16 @@
 import { Response, NextFunction } from "express";
 import { AuthedRequest } from "./requireAuth.js";
+import { UnauthorizedError, ForbiddenError } from "../shared/errors/AuthErrors.js";
 
 export function requireRole(...roles: Array<"ADMIN" | "USER">) {
   return (req: AuthedRequest, res: Response, next: NextFunction) => {
     const role = req.user?.role;
-    if (!role) return res.status(401).json({ error: "Unauthenticated" });
-    if (!roles.includes(role)) return res.status(403).json({ error: "Forbidden" });
+    if (!role) {
+      throw new UnauthorizedError("Unauthenticated");
+    }
+    if (!roles.includes(role)) {
+      throw new ForbiddenError("Insufficient permissions");
+    }
     return next();
   };
 }

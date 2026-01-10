@@ -1,11 +1,14 @@
 import { Request, Response, NextFunction } from "express";
 import { verifyToken } from "../utils/jwt.js";
+import { UnauthorizedError } from "../shared/errors/AuthErrors.js";
 
 export type AuthedRequest = Request & { user?: { id: string; role: "ADMIN" | "USER" } };
 
 export function requireAuth(req: AuthedRequest, res: Response, next: NextFunction) {
   const header = req.headers.authorization;
-  if (!header?.startsWith("Bearer ")) return res.status(401).json({ error: "Missing token" });
+  if (!header?.startsWith("Bearer ")) {
+    throw new UnauthorizedError("Missing token");
+  }
 
   try {
     const token = header.slice("Bearer ".length);
@@ -13,6 +16,6 @@ export function requireAuth(req: AuthedRequest, res: Response, next: NextFunctio
     req.user = { id: payload.sub, role: payload.role };
     return next();
   } catch {
-    return res.status(401).json({ error: "Invalid token" });
+    throw new UnauthorizedError("Invalid token");
   }
 }
