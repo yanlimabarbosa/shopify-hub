@@ -7,6 +7,7 @@ import {
   UserNotFoundError,
 } from "../../shared/errors/AuthErrors.js";
 import type { RegisterInput, LoginInput, UserResponse, LoginResponse } from "./auth.types.js";
+import { logger } from "../../utils/logger.js";
 
 export class AuthService {
   private readonly BCRYPT_ROUNDS = 10;
@@ -31,6 +32,7 @@ export class AuthService {
       role,
     });
 
+    logger.info({ userId: user.id, email: user.email, role }, "User registered successfully");
     return user;
   }
 
@@ -52,6 +54,7 @@ export class AuthService {
       role: user.role,
     });
 
+    logger.info({ userId: user.id, role: user.role }, "User logged in successfully");
     return { token };
   }
 

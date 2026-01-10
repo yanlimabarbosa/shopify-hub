@@ -1,4 +1,5 @@
 import { prisma } from "../../config/prisma.js";
+import { Prisma } from "@prisma/client";
 
 export class OrdersRepository {
   async findMany(options: {
@@ -8,7 +9,7 @@ export class OrdersRepository {
   }) {
     const { limit, cursor, shopDomain } = options;
 
-    const where: any = {};
+    const where: Prisma.OrderWhereInput = {};
 
     if (shopDomain) {
       where.shop = {
@@ -16,25 +17,8 @@ export class OrdersRepository {
       };
     }
 
-    let orders;
-
-    if (cursor) {
-      const cursorExists = await prisma.order.findUnique({
-        where: { id: cursor },
-        select: { id: true },
-      });
-
-      if (!cursorExists) {
-        return {
-          items: [],
-          nextCursor: null,
-          hasMore: false,
-        };
-      }
-    }
-
-    orders = await prisma.order.findMany({
-      take: limit + 1, // Take one extra to check if there's more
+    const orders = await prisma.order.findMany({
+      take: limit + 1,
       cursor: cursor ? { id: cursor } : undefined,
       skip: cursor ? 1 : 0,
       where,
@@ -62,7 +46,7 @@ export class OrdersRepository {
   }
 
   async count(shopDomain?: string) {
-    const where: any = {};
+    const where: Prisma.OrderWhereInput = {};
 
     if (shopDomain) {
       where.shop = {

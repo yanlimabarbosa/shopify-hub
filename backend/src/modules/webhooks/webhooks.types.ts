@@ -9,18 +9,38 @@ export const webhookTopics = [
 
 export type WebhookTopic = (typeof webhookTopics)[number];
 
-export type ShopifyWebhookPayload = {
-  id: number;
-  title?: string;
-  status?: string;
-  vendor?: string;
-  created_at?: string;
-  updated_at?: string;
-  name?: string;
-  total_price?: string;
-  currency?: string;
-  financial_status?: string;
-};
+export const shopifyWebhookPayloadSchema = z.object({
+  id: z.number(),
+  title: z.string().optional(),
+  status: z.string().optional(),
+  vendor: z.string().optional(),
+  created_at: z.string().optional(),
+  updated_at: z.string().optional(),
+  name: z.string().optional(),
+  total_price: z.string().optional(),
+  currency: z.string().optional(),
+  financial_status: z.string().optional(),
+});
+
+export type ShopifyWebhookPayload = z.infer<typeof shopifyWebhookPayloadSchema>;
+
+export const shopifyWebhookResponseSchema = z.object({
+  id: z.number(),
+  address: z.string(),
+  topic: z.string(),
+});
+
+export const shopifyWebhooksListResponseSchema = z.object({
+  webhooks: z.array(shopifyWebhookResponseSchema).optional(),
+});
+
+export const shopifyWebhookCreateResponseSchema = z.object({
+  webhook: z
+    .object({
+      id: z.number(),
+    })
+    .optional(),
+});
 
 export type WebhookRegistrationResult = {
   topic: WebhookTopic;

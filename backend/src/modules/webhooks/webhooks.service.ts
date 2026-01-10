@@ -4,14 +4,17 @@ import { shopifyRepository } from "../shopify/shopify.repository.js";
 import { webhooksRepository } from "./webhooks.repository.js";
 import {
   ShopNotFoundError,
-  MissingShopifyCredentialsError,
   WebhookValidationError,
 } from "../../shared/errors/ShopifyErrors.js";
-import type {
-  WebhookTopic,
-  ShopifyWebhookPayload,
-  WebhookRegistrationResult,
-  WebhookEventData,
+import { logger } from "../../utils/logger.js";
+import { env } from "../../config/env.js";
+import {
+  shopifyWebhooksListResponseSchema,
+  shopifyWebhookCreateResponseSchema,
+  type WebhookTopic,
+  type ShopifyWebhookPayload,
+  type WebhookRegistrationResult,
+  type WebhookEventData,
 } from "./webhooks.types.js";
 
 export class WebhooksService {
@@ -24,14 +27,10 @@ export class WebhooksService {
   ];
 
   private getCredentials() {
-    const apiSecret = process.env.SHOPIFY_API_SECRET;
-    const webhookBaseUrl = process.env.WEBHOOK_BASE_URL;
-
-    if (!apiSecret || !webhookBaseUrl) {
-      throw new MissingShopifyCredentialsError();
-    }
-
-    return { apiSecret, webhookBaseUrl };
+    return {
+      apiSecret: env.SHOPIFY_API_SECRET,
+      webhookBaseUrl: env.WEBHOOK_BASE_URL,
+    };
   }
 
   validateHmac(rawBody: string, hmac: string): void {
@@ -57,6 +56,8 @@ export class WebhooksService {
       throw new ShopNotFoundError();
     }
 
+    logger.info({ shopDomain: shop.shopDomain }, "Starting webhook registration");
+
     const { webhookBaseUrl } = this.getCredentials();
     const webhookUrl = `${webhookBaseUrl}/webhooks/shopify`;
     const results: WebhookRegistrationResult[] = [];
@@ -75,11 +76,19 @@ export class WebhooksService {
           }
         );
 
-        const existing = existingWebhooks.data.webhooks?.find(
-          (wh: any) => wh.address === webhookUrl && wh.topic === topic
+        const webhooksListResult = shopifyWebhooksListResponseSchema.safeParse(existingWebhooks.data);
+
+        if (!webhooksListResult.success) {
+          logger.error({ errors: webhooksListResult.error.issues }, "Invalid webhooks list response");
+          throw new Error("Invalid webhooks list response");
+        }
+
+        const existing = webhooksListResult.data.webhooks?.find(
+          (wh) => wh.address === webhookUrl && wh.topic === topic
         );
 
         if (existing) {
+          logger.debug({ topic, shopDomain: shop.shopDomain }, "Webhook already exists");
           results.push({
             topic,
             status: "exists",
@@ -106,21 +115,33 @@ export class WebhooksService {
           }
         );
 
+        const createResult = shopifyWebhookCreateResponseSchema.safeParse(response.data);
+
+        if (!createResult.success) {
+          logger.error({ errors: createResult.error.issues }, "Invalid webhook create response");
+          throw new Error("Invalid webhook create response");
+        }
+
+        const webhookId = createResult.data.webhook?.id;
+
+        logger.info({ topic, shopDomain: shop.shopDomain, webhookId }, "Webhook created");
         results.push({
           topic,
           status: "created",
-          webhookId: response.data.webhook?.id,
+          webhookId,
         });
       } catch (error) {
         if (axios.isAxiosError(error)) {
           const errorMessage =
             error.response?.data?.errors || error.message || "Failed to register webhook";
+          logger.error({ error: errorMessage, topic, shopDomain: shop.shopDomain }, "Webhook registration failed");
           results.push({
             topic,
             status: "error",
             error: errorMessage,
           });
         } else {
+          logger.error({ error, topic, shopDomain: shop.shopDomain }, "Unknown error during webhook registration");
           results.push({
             topic,
             status: "error",
@@ -129,6 +150,12 @@ export class WebhooksService {
         }
       }
     }
+
+    const successCount = results.filter((r) => r.status === "created" || r.status === "exists").length;
+    logger.info(
+      { shopDomain: shop.shopDomain, successCount, total: results.length },
+      "Webhook registration completed"
+    );
 
     return results;
   }
@@ -141,6 +168,23 @@ export class WebhooksService {
       throw new ShopNotFoundError();
     }
 
+    const webhookId = payload.id?.toString();
+    if (webhookId) {
+      const existing = await webhooksRepository.findExistingWebhook({
+        shopId: shop.id,
+        topic,
+        webhookId,
+      });
+
+      if (existing) {
+        logger.info(
+          { webhookId, topic, shopDomain, receivedAt: existing.receivedAt },
+          "Webhook already processed, skipping"
+        );
+        return;
+      }
+    }
+
     try {
       await webhooksRepository.saveWebhookEvent({
         shopId: shop.id,
@@ -148,7 +192,7 @@ export class WebhooksService {
         payloadJson: payload,
       });
     } catch (error) {
-      console.error("Failed to save webhook event:", error);
+      logger.error({ error, shopId: shop.id, topic }, "Failed to save webhook event");
     }
 
     // Process based on topic
@@ -164,13 +208,13 @@ export class WebhooksService {
         break;
 
       default:
-        console.warn(`Unknown webhook topic: ${topic}`);
+        logger.warn({ topic }, "Unknown webhook topic");
     }
   }
 
   private async handleProductWebhook(shopId: string, payload: ShopifyWebhookPayload): Promise<void> {
     if (!payload.id || !payload.title) {
-      console.warn("Invalid product webhook payload:", payload);
+      logger.warn({ shopId, payload }, "Invalid product webhook payload");
       return;
     }
 
@@ -187,7 +231,7 @@ export class WebhooksService {
 
   private async handleOrderWebhook(shopId: string, payload: ShopifyWebhookPayload): Promise<void> {
     if (!payload.id) {
-      console.warn("Invalid order webhook payload:", payload);
+      logger.warn({ shopId, payload }, "Invalid order webhook payload");
       return;
     }
 

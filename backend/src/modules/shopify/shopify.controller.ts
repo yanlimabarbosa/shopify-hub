@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import { shopifyService } from "./shopify.service.js";
 import { authStartSchema, authCallbackSchema } from "./shopify.types.js";
 import type { AuthStartInput, AuthCallbackInput } from "./shopify.types.js";
+import { env } from "../../config/env.js";
 
 export async function authStart(req: Request, res: Response): Promise<Response | void> {
   const validatedInput: AuthStartInput = authStartSchema.parse(req.query);
@@ -23,7 +24,7 @@ export async function authCallback(req: Request, res: Response): Promise<Respons
     await shopifyService.completeOAuth(validatedInput);
 
     // Get frontend URL from env or default
-    const frontendUrl = process.env.FRONTEND_URL || "http://localhost:8080";
+    const frontendUrl = env.FRONTEND_URL || "http://localhost:8080";
 
     // Redirect to frontend callback page with success
     const redirectUrl = new URL(`${frontendUrl}/shopify-callback`);
@@ -37,7 +38,7 @@ export async function authCallback(req: Request, res: Response): Promise<Respons
     res.redirect(redirectUrl.toString());
   } catch (error) {
     // On error, redirect to frontend with error status
-    const frontendUrl = process.env.FRONTEND_URL || "http://localhost:8080";
+    const frontendUrl = env.FRONTEND_URL || "http://localhost:8080";
     const redirectUrl = new URL(`${frontendUrl}/shopify-callback`);
     redirectUrl.searchParams.set("status", "error");
     redirectUrl.searchParams.set("message", error instanceof Error ? error.message : "OAuth failed");

@@ -1,75 +1,94 @@
 import { Request, Response } from "express";
 import { webhooksService } from "./webhooks.service.js";
 import { WebhookValidationError } from "../../shared/errors/ShopifyErrors.js";
+import { logger } from "../../utils/logger.js";
+import type { ShopifyWebhookPayload } from "./webhooks.types.js";
+
+function getStringValue(value: unknown): string | undefined {
+  if (typeof value === "string") {
+    return value;
+  }
+  return undefined;
+}
 
 export async function registerWebhooks(req: Request, res: Response): Promise<Response> {
-  try {
-    console.log("Registering webhooks...");
-    const shopDomain = (req.body?.shop as string) || (req.query?.shop as string) || undefined;
+  const shopDomain = getStringValue(req.body?.shop) || getStringValue(req.query?.shop) || undefined;
 
-    const results = await webhooksService.registerWebhooks(shopDomain);
+  const results = await webhooksService.registerWebhooks(shopDomain);
 
-    const allCreated = results.every((r) => r.status === "created" || r.status === "exists");
-    const hasErrors = results.some((r) => r.status === "error");
+  const allCreated = results.every((r) => r.status === "created" || r.status === "exists");
+  const hasErrors = results.some((r) => r.status === "error");
 
-    return res.status(hasErrors ? 207 : 200).json({
-      message: "Webhook registration completed",
-      webhooks: results,
-      success: allCreated && !hasErrors,
-    });
-  } catch (error) {
-    throw error;
-  }
+  return res.status(hasErrors ? 207 : 200).json({
+    message: "Webhook registration completed",
+    webhooks: results,
+    success: allCreated && !hasErrors,
+  });
 }
 
 export async function receiveWebhook(req: Request, res: Response): Promise<Response> {
-  try {
-    console.log("🔥🔥🔥 WEBHOOK CONTROLLER EXECUTED 🔥🔥🔥");
-    console.log(`Request URL: ${req.url}`);
-    console.log(`Request Method: ${req.method}`);
+  logger.debug(
+    {
+      url: req.url,
+      method: req.method,
+    },
+    "Webhook controller executed"
+  );
 
-    const rawBody = (req as any).rawBody as string;
-    console.log("Raw body exists:", !!rawBody);
-    if (!rawBody) {
-      throw new WebhookValidationError("Raw body is required for HMAC validation");
-    }
+  const rawBody = req.rawBody;
+  if (!rawBody || typeof rawBody !== "string") {
+    logger.warn("Webhook request missing raw body");
+    throw new WebhookValidationError("Raw body is required for HMAC validation");
+  }
 
-    const hmac = req.headers["x-shopify-hmac-sha256"] as string;
-    const topic = req.headers["x-shopify-topic"] as string;
-    const shopDomain = req.headers["x-shopify-shop-domain"] as string;
+  const hmac = getStringValue(req.headers["x-shopify-hmac-sha256"]);
+  const topic = getStringValue(req.headers["x-shopify-topic"]);
+  const shopDomain = getStringValue(req.headers["x-shopify-shop-domain"]);
 
-    console.log("Webhook Headers:");
-    console.log("  Topic:", topic);
-    console.log("  Shop Domain:", shopDomain);
-    console.log("  HMAC exists:", !!hmac);
-
-    if (!hmac || !topic || !shopDomain) {
-      console.error("❌ Missing required webhook headers");
-      throw new WebhookValidationError("Missing required webhook headers");
-    }
-
-    console.log("✅ Validating HMAC...");
-    webhooksService.validateHmac(rawBody, hmac);
-    console.log("✅ HMAC validation passed");
-
-    let payload: any;
-    try {
-      payload = JSON.parse(rawBody);
-      console.log("✅ Payload parsed, processing webhook...");
-    } catch (error) {
-      console.error("❌ Invalid JSON payload:", error);
-      throw new WebhookValidationError("Invalid JSON payload");
-    }
-
-    await webhooksService.processWebhook({
+  logger.debug(
+    {
       topic,
       shopDomain,
-      payload,
-    });
+      hasHmac: !!hmac,
+    },
+    "Webhook headers received"
+  );
 
-    console.log("✅ Webhook processed successfully");
-    return res.status(200).json({ received: true });
-  } catch (error) {
-    throw error;
+  if (!hmac || !topic || !shopDomain) {
+    logger.warn({ hmac: !!hmac, topic: !!topic, shopDomain: !!shopDomain }, "Missing required webhook headers");
+    throw new WebhookValidationError("Missing required webhook headers");
   }
+
+  logger.debug("Validating HMAC");
+  webhooksService.validateHmac(rawBody, hmac);
+  logger.debug("HMAC validation passed");
+
+  let payload: unknown;
+  try {
+    payload = JSON.parse(rawBody);
+    logger.debug("Payload parsed successfully");
+  } catch (error) {
+    logger.error({ error }, "Invalid JSON payload");
+    throw new WebhookValidationError("Invalid JSON payload");
+  }
+
+  // Validate payload structure using Zod
+  const { shopifyWebhookPayloadSchema } = await import("./webhooks.types.js");
+  const validationResult = shopifyWebhookPayloadSchema.safeParse(payload);
+
+  if (!validationResult.success) {
+    logger.error({ issues: validationResult.error.issues }, "Invalid webhook payload structure");
+    throw new WebhookValidationError("Invalid payload structure");
+  }
+
+  const validatedPayload: ShopifyWebhookPayload = validationResult.data;
+
+  await webhooksService.processWebhook({
+    topic,
+    shopDomain,
+    payload: validatedPayload,
+  });
+
+  logger.info({ topic, shopDomain }, "Webhook processed successfully");
+  return res.status(200).json({ received: true });
 }

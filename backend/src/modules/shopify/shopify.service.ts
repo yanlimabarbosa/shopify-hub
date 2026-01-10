@@ -7,6 +7,8 @@ import {
   ShopNotFoundError,
   MissingShopifyCredentialsError,
 } from "../../shared/errors/ShopifyErrors.js";
+import { logger } from "../../utils/logger.js";
+import { env } from "../../config/env.js";
 import type {
   AuthStartInput,
   AuthCallbackInput,
@@ -20,16 +22,12 @@ export class ShopifyService {
   private readonly API_VERSION = "2024-01";
 
   private getCredentials() {
-    const apiKey = process.env.SHOPIFY_API_KEY;
-    const apiSecret = process.env.SHOPIFY_API_SECRET;
-    const scopes = process.env.SHOPIFY_SCOPES;
-    const redirectUri = process.env.SHOPIFY_REDIRECT_URI;
-
-    if (!apiKey || !apiSecret || !scopes || !redirectUri) {
-      throw new MissingShopifyCredentialsError();
-    }
-
-    return { apiKey, apiSecret, scopes, redirectUri };
+    return {
+      apiKey: env.SHOPIFY_API_KEY,
+      apiSecret: env.SHOPIFY_API_SECRET,
+      scopes: env.SHOPIFY_SCOPES,
+      redirectUri: env.SHOPIFY_REDIRECT_URI,
+    };
   }
 
   generateOAuthUrl(input: AuthStartInput): string {
@@ -48,6 +46,8 @@ export class ShopifyService {
   async completeOAuth(input: AuthCallbackInput): Promise<ShopResponse> {
     const { apiKey, apiSecret } = this.getCredentials();
     const { code, shop } = input;
+
+    logger.info({ shop }, "Completing OAuth flow");
 
     try {
       const requestUrl = `https://${shop}/admin/oauth/access_token`;
@@ -74,12 +74,15 @@ export class ShopifyService {
         scopes: scope,
       });
 
+      logger.info({ shopDomain: shop, scopes: scope }, "OAuth completed successfully");
       return savedShop;
     } catch (error) {
       if (axios.isAxiosError(error)) {
         const errorMessage = error.response?.data?.error || error.message || "Failed to exchange OAuth code";
+        logger.error({ error: errorMessage, shop }, "OAuth failed");
         throw new ShopifyOAuthError(errorMessage);
       }
+      logger.error({ error, shop }, "Unexpected error during OAuth");
       throw error;
     }
   }
@@ -92,6 +95,8 @@ export class ShopifyService {
     if (!shop) {
       throw new ShopNotFoundError();
     }
+
+    logger.info({ shopDomain: shop.shopDomain }, "Starting products sync");
 
     try {
       const response = await axios.get<ShopifyProductsResponse>(
@@ -109,17 +114,25 @@ export class ShopifyService {
 
       const products = response.data.products || [];
 
-      for (const product of products) {
-        await shopifyRepository.upsertProduct({
-          shopifyId: String(product.id),
-          shopId: shop.id,
-          title: product.title,
-          status: product.status || null,
-          vendor: product.vendor || null,
-          createdAtShopify: product.created_at ? new Date(product.created_at) : null,
-          updatedAtShopify: product.updated_at ? new Date(product.updated_at) : null,
-        });
-      }
+      // Parallelize upserts for better performance
+      await Promise.all(
+        products.map((product) =>
+          shopifyRepository.upsertProduct({
+            shopifyId: String(product.id),
+            shopId: shop.id,
+            title: product.title,
+            status: product.status || null,
+            vendor: product.vendor || null,
+            createdAtShopify: product.created_at ? new Date(product.created_at) : null,
+            updatedAtShopify: product.updated_at ? new Date(product.updated_at) : null,
+          })
+        )
+      );
+
+      logger.info(
+        { shopDomain: shop.shopDomain, syncedCount: products.length },
+        "Products sync completed"
+      );
 
       return {
         syncedCount: products.length,
@@ -127,10 +140,11 @@ export class ShopifyService {
       };
     } catch (error) {
       if (axios.isAxiosError(error)) {
-        throw new ShopifyAPIError(
-          `Failed to fetch products: ${error.response?.data?.errors || error.message}`
-        );
+        const errorMessage = `Failed to fetch products: ${error.response?.data?.errors || error.message}`;
+        logger.error({ error: errorMessage, shopDomain: shop.shopDomain }, "Products sync failed");
+        throw new ShopifyAPIError(errorMessage);
       }
+      logger.error({ error, shopDomain: shop.shopDomain }, "Unexpected error during products sync");
       throw error;
     }
   }
@@ -144,6 +158,8 @@ export class ShopifyService {
       throw new ShopNotFoundError();
     }
 
+    logger.info({ shopDomain: shop.shopDomain }, "Starting orders sync");
+
     try {
       const response = await axios.get<ShopifyOrdersResponse>(
         `https://${shop.shopDomain}/admin/api/${this.API_VERSION}/orders.json`,
@@ -156,18 +172,26 @@ export class ShopifyService {
 
       const orders = response.data.orders;
 
-      for (const order of orders) {
-        await shopifyRepository.upsertOrder({
-          shopifyId: String(order.id),
-          shopId: shop.id,
-          name: order.name || null,
-          totalPrice: order.total_price || null,
-          currency: order.currency || null,
-          financialStatus: order.financial_status || null,
-          createdAtShopify: order.created_at ? new Date(order.created_at) : null,
-          updatedAtShopify: order.updated_at ? new Date(order.updated_at) : null,
-        });
-      }
+      // Parallelize upserts for better performance
+      await Promise.all(
+        orders.map((order) =>
+          shopifyRepository.upsertOrder({
+            shopifyId: String(order.id),
+            shopId: shop.id,
+            name: order.name || null,
+            totalPrice: order.total_price || null,
+            currency: order.currency || null,
+            financialStatus: order.financial_status || null,
+            createdAtShopify: order.created_at ? new Date(order.created_at) : null,
+            updatedAtShopify: order.updated_at ? new Date(order.updated_at) : null,
+          })
+        )
+      );
+
+      logger.info(
+        { shopDomain: shop.shopDomain, syncedCount: orders.length },
+        "Orders sync completed"
+      );
 
       return {
         syncedCount: orders.length,
@@ -175,10 +199,11 @@ export class ShopifyService {
       };
     } catch (error) {
       if (axios.isAxiosError(error)) {
-        throw new ShopifyAPIError(
-          `Failed to fetch orders: ${error.response?.data?.errors || error.message}`
-        );
+        const errorMessage = `Failed to fetch orders: ${error.response?.data?.errors || error.message}`;
+        logger.error({ error: errorMessage, shopDomain: shop.shopDomain }, "Orders sync failed");
+        throw new ShopifyAPIError(errorMessage);
       }
+      logger.error({ error, shopDomain: shop.shopDomain }, "Unexpected error during orders sync");
       throw error;
     }
   }

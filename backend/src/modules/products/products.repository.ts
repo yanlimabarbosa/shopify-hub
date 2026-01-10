@@ -1,3 +1,4 @@
+import { Prisma } from "@prisma/client";
 import { prisma } from "../../config/prisma.js";
 
 export class ProductsRepository {
@@ -8,7 +9,7 @@ export class ProductsRepository {
   }) {
     const { limit, cursor, shopDomain } = options;
 
-    const where: any = {};
+    const where: Prisma.ProductWhereInput = {};
 
     if (shopDomain) {
       where.shop = {
@@ -16,25 +17,9 @@ export class ProductsRepository {
       };
     }
 
-    let products;
-
-    if (cursor) {
-      const cursorExists = await prisma.product.findUnique({
-        where: { id: cursor },
-        select: { id: true },
-      });
-
-      if (!cursorExists) {
-        return {
-          items: [],
-          nextCursor: null,
-          hasMore: false,
-        };
-      }
-    }
-
-    products = await prisma.product.findMany({
-      take: limit + 1, // Take one extra to check if there's more
+    // ✅ Removida validação extra do cursor
+    const products = await prisma.product.findMany({
+      take: limit + 1,
       cursor: cursor ? { id: cursor } : undefined,
       skip: cursor ? 1 : 0,
       where,
@@ -62,7 +47,7 @@ export class ProductsRepository {
   }
 
   async count(shopDomain?: string) {
-    const where: any = {};
+    const where: Prisma.ProductWhereInput = {};
 
     if (shopDomain) {
       where.shop = {

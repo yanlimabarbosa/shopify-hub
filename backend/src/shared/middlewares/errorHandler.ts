@@ -2,6 +2,8 @@ import { Request, Response, NextFunction } from "express";
 import { ZodError } from "zod";
 import { AppError } from "../errors/AppError.js";
 import { ValidationError } from "../errors/ValidationError.js";
+import { logger } from "../../utils/logger.js";
+import { env } from "../../config/env.js";
 
 interface ErrorResponse {
   status: "error";
@@ -26,7 +28,7 @@ export function errorHandler(
       response.details = error.details;
     }
 
-    if (process.env.NODE_ENV === "development") {
+    if (env.NODE_ENV === "development") {
       response.stack = error.stack;
     }
 
@@ -43,22 +45,22 @@ export function errorHandler(
   }
 
   // Log error with full details
-  console.error("=".repeat(50));
-  console.error("Unhandled error:", error.message);
-  console.error("Stack:", error.stack);
-  console.error("Request URL:", req.url);
-  console.error("Request Method:", req.method);
-  if (error instanceof Error && error.stack) {
-    console.error("Full Error Stack:", error.stack);
-  }
-  console.error("=".repeat(50));
+  logger.error(
+    {
+      error: error.message,
+      stack: error.stack,
+      url: req.url,
+      method: req.method,
+    },
+    "Unhandled error"
+  );
 
   const response: ErrorResponse = {
     status: "error",
     message: "Internal server error",
   };
 
-  if (process.env.NODE_ENV === "development" || process.env.NODE_ENV !== "production") {
+  if (env.NODE_ENV === "development") {
     response.stack = error.stack;
     response.details = error.message;
   }
