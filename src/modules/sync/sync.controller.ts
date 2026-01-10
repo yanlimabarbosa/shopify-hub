@@ -1,17 +1,24 @@
 import { Request, Response } from "express";
+import { shopifyService } from "../shopify/shopify.service.js";
 
-/**
- * TODO (candidato):
- * - Ler shopDomain (ex: query ?shop=) ou escolher a última loja instalada
- * - Buscar accessToken no DB
- * - Chamar Shopify Admin API (REST ou GraphQL)
- * - Upsert em Product/Order
- * - Retornar contagem sincronizada
- */
-export async function syncProducts(_req: Request, res: Response) {
-  return res.status(501).json({ todo: "Implement products sync" });
+export async function syncProducts(req: Request, res: Response): Promise<Response> {
+  const shopDomain = req.body.shop || req.query.shop;
+  const result = await shopifyService.syncProducts(shopDomain);
+
+  return res.json({
+    message: "Products synced successfully",
+    syncedCount: result.syncedCount,
+    shop: result.shop,
+  });
 }
 
-export async function syncOrders(_req: Request, res: Response) {
-  return res.status(501).json({ todo: "Implement orders sync" });
+export async function syncOrders(req: Request, res: Response): Promise<Response> {
+  const shopDomain = req.body.shop || req.query.shop;
+  const result = await shopifyService.syncOrders(shopDomain);
+
+  return res.json({
+    message: "Orders synced successfully",
+    syncedCount: result.syncedCount,
+    shop: result.shop,
+  });
 }
