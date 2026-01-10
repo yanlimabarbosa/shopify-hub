@@ -1,0 +1,6 @@
+@baseUrl = http://localhost:3000
+@token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJjbWs3aWQ3dWEwMDAwMWpoc3pvN2k2bjRiIiwicm9sZSI6IkFETUlOIiwiaWF0IjoxNzY4MDM1MjEyLCJleHAiOjE3NjgwNjQwMTJ9.jzfc1Fg-fNygmkG3CXPSLFAdouWW8qar9Mn_hQWljzo
+
+### Register Webhooks
+POST {{baseUrl}}/webhooks/register
+Authorization: Bearer {{token}}

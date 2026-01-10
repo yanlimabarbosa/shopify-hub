@@ -1,0 +1,10 @@
+@baseUrl = http://localhost:3000
+@token = YOUR_TOKEN_HERE
+
+### Sync Products
+POST {{baseUrl}}/sync/products
+Authorization: Bearer {{token}}
+
+### Sync Orders
+POST {{baseUrl}}/sync/orders
+Authorization: Bearer {{token}}

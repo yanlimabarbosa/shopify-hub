@@ -1,0 +1,406 @@
+# Project Summary: Shopify Orders & Products Hub
+
+## 📚 Resources Used
+
+### Official Documentation
+- **Shopify REST Admin API**: https://shopify.dev/api/admin-rest
+- **Shopify Products API**: https://shopify.dev/api/admin-rest/latest/resources/product
+- **Shopify OAuth**: https://shopify.dev/docs/apps/auth/oauth
+- **Shopify Webhooks**: https://shopify.dev/docs/apps/webhooks
+
+### Key Technical Resources
+- **Express 5.0**: Native async error handling (no need for express-async-errors)
+- **Prisma**: ORM for PostgreSQL database
+- **Zod**: Input validation and type inference
+- **JWT (jsonwebtoken)**: Authentication tokens
+- **Bcrypt**: Password hashing
+- **Axios**: HTTP client for Shopify API calls
+- **Ngrok**: HTTPS tunneling for webhook testing
+
+### API Versions
+- **Shopify API Version**: `2024-01` (can be updated to `2025-10` or `2026-01`)
+
+---
+
+## 🔧 Shopify OAuth Flow - Errors & Solutions
+
+### Critical Issues Resolved
+
+#### 1. **"Missing or invalid client secret" Error**
+**Problem**: Shopify OAuth token exchange was failing with 400 error.
+
+**Root Cause**: 
+- Shopify's `/admin/oauth/access_token` endpoint expects `application/x-www-form-urlencoded` data, NOT JSON
+- The code was sending JSON data via `axios.post()`
+
+**Solution**:
+```typescript
+// ❌ WRONG (sends JSON):
+await axios.post(url, { client_id, client_secret, code });
+
+// ✅ CORRECT (sends form-encoded):
+const formData = new URLSearchParams();
+formData.append("client_id", apiKey);
+formData.append("client_secret", apiSecret);
+formData.append("code", code);
+
+await axios.post(url, formData.toString(), {
+  headers: { "Content-Type": "application/x-www-form-urlencoded" }
+});
+```
+
+**File**: `src/modules/shopify/shopify.service.ts` - `completeOAuth()` method
+
+---
+
+#### 2. **"Redirect URI and application URL must have matching hosts" Error**
+**Problem**: Persistent OAuth redirect URI mismatch error.
+
+**Root Causes & Solutions**:
+
+a) **Ngrok URL Changes**:
+- Free ngrok URLs change on restart
+- Solution: Update `.env` and Shopify app config every time ngrok restarts
+
+b) **Shopify App Configuration**:
+- **App URL** must be: `https://your-ngrok-url.ngrok-free.app` (base URL, no path)
+- **Allowed redirection URL(s)** must be: `https://your-ngrok-url.ngrok-free.app/shopify/callback`
+- Solution: Ensure both match exactly in Shopify Partner Dashboard → Your App → Configuration
+
+c) **Server Not Restarted**:
+- `.env` changes require server restart
+- Solution: Always restart server after changing `SHOPIFY_REDIRECT_URI` or `WEBHOOK_BASE_URL`
+
+d) **Browser Cache**:
+- Old OAuth URLs cached in browser
+- Solution: Clear browser cache or use incognito/private window
+
+e) **App Not Published**:
+- Changes in Dev Dashboard need to be "Released" or "Published"
+- Solution: Go to Shopify Dev Dashboard → Your App → Release/Publish
+
+**Key Configuration**:
+```env
+SHOPIFY_REDIRECT_URI=https://your-ngrok-url.ngrok-free.app/shopify/callback
+WEBHOOK_BASE_URL=https://your-ngrok-url.ngrok-free.app
+```
+
+---
+
+#### 3. **Product Sync Returning 0 Products**
+**Problem**: API returned empty array despite products existing in store.
+
+**Root Causes & Solutions**:
+
+a) **Wrong Query Parameter**:
+- Products API uses `published_status`, NOT `status`
+- Solution: Changed from `status: "any"` to `published_status: "any"`
+
+b) **API Version Mismatch**:
+- Using outdated API version
+- Solution: Updated to `2024-01` (can use `2025-10` or `2026-01`)
+
+c) **Old Access Token**:
+- Database had old private app token (`shpat_...`) instead of OAuth token
+- Solution: Run fresh OAuth flow to get proper OAuth token (`shpua_...`)
+
+**Fixed Code**:
+```typescript
+const response = await axios.get(
+  `https://${shop.shopDomain}/admin/api/${this.API_VERSION}/products.json`,
+  {
+    headers: { "X-Shopify-Access-Token": shop.accessToken },
+    params: {
+      published_status: "any", // ✅ Correct parameter
+      limit: 250,
+    },
+  }
+);
+```
+
+**File**: `src/modules/shopify/shopify.service.ts` - `syncProducts()` method
+
+---
+
+## 🏗️ Application Architecture
+
+### Tech Stack
+- **Runtime**: Node.js with TypeScript
+- **Framework**: Express 5.2.1 (native async error handling)
+- **Database**: PostgreSQL with Prisma ORM
+- **Authentication**: JWT with bcrypt password hashing
+- **Validation**: Zod schemas with type inference
+- **HTTP Client**: Axios for Shopify API calls
+
+### Project Structure
+```
+backend-test-clone/
+├── src/
+│   ├── config/
+│   │   └── prisma.ts          # Prisma client instance
+│   ├── middlewares/
+│   │   ├── requireAuth.ts     # JWT authentication middleware
+│   │   └── requireRole.ts      # Role-based authorization
+│   ├── modules/
+│   │   ├── auth/               # ✅ COMPLETE
+│   │   │   ├── auth.controller.ts
+│   │   │   ├── auth.service.ts
+│   │   │   ├── auth.repository.ts
+│   │   │   ├── auth.types.ts
+│   │   │   └── auth.routes.ts
+│   │   ├── shopify/           # ✅ COMPLETE
+│   │   │   ├── shopify.controller.ts
+│   │   │   ├── shopify.service.ts
+│   │   │   ├── shopify.repository.ts
+│   │   │   ├── shopify.types.ts
+│   │   │   └── shopify.routes.ts
+│   │   ├── sync/               # ✅ COMPLETE
+│   │   │   ├── sync.controller.ts
+│   │   │   └── sync.routes.ts
+│   │   ├── products/           # ❌ TODO
+│   │   ├── orders/             # ❌ TODO
+│   │   ├── dashboard/          # ❌ TODO
+│   │   └── webhooks/           # ❌ TODO
+│   ├── shared/
+│   │   ├── errors/             # Custom error classes
+│   │   └── middlewares/
+│   │       └── errorHandler.ts # Global error handler
+│   ├── utils/
+│   │   └── jwt.ts              # JWT sign/verify
+│   ├── routes.ts               # Main router
+│   └── server.ts               # Express app setup
+├── prisma/
+│   └── schema.prisma           # Database schema
+└── http-rest-client/            # HTTP test files
+```
+
+### Database Schema
+- **User**: id, name, email, passwordHash, role (ADMIN/USER), createdAt
+- **Shop**: id, shopDomain, accessToken, scopes, installedAt
+- **Product**: id, shopifyId, shopId, title, status, vendor, timestamps
+- **Order**: id, shopifyId, shopId, name, totalPrice, currency, financialStatus, timestamps
+- **WebhookEvent**: id, shopId, topic, payloadJson, receivedAt
+
+### Security Features
+- ✅ First user automatically becomes ADMIN (prevents privilege escalation)
+- ✅ Role field removed from registration body (security fix)
+- ✅ JWT token validation
+- ✅ Role-based access control (ADMIN vs USER)
+- ✅ Password hashing with bcrypt (10 rounds)
+- ✅ Input validation with Zod schemas
+- ✅ Custom error handling with proper HTTP status codes
+
+---
+
+## ✅ What's Implemented
+
+### A) Authentication & Authorization ✅
+- [x] `POST /auth/register` - Register user (first user = ADMIN)
+- [x] `POST /auth/login` - Login with JWT token
+- [x] `GET /auth/me` - Get current user profile
+- [x] JWT middleware (`requireAuth`)
+- [x] Role middleware (`requireRole`)
+- [x] Layered architecture (Controller → Service → Repository)
+- [x] Custom error classes (EmailAlreadyExistsError, InvalidCredentialsError, etc.)
+
+### B) Shopify OAuth ✅
+- [x] `GET /shopify/auth?shop=xxx.myshopify.com` - Start OAuth flow
+- [x] `GET /shopify/callback` - Complete OAuth and save shop
+- [x] Shop persistence (shopDomain, accessToken, scopes, installedAt)
+- [x] Form-encoded token exchange (fixed)
+- [x] Error handling for OAuth failures
+
+### C) Sync (ADMIN only) ✅
+- [x] `POST /sync/products` - Sync products from Shopify
+- [x] `POST /sync/orders` - Sync orders from Shopify
+- [x] Upsert pattern (create or update by shopifyId + shopId)
+- [x] Uses `published_status: "any"` for products (fixed)
+- [x] Handles pagination (limit: 250)
+- [x] Error handling for API failures
+
+---
+
+## ❌ What Remains to be Done
+
+### D) Webhooks ❌ **NOT IMPLEMENTED**
+**Required Routes**:
+- [ ] `POST /webhooks/register` (ADMIN) - Register webhooks in Shopify
+- [ ] `POST /webhooks/shopify` (public) - Receive webhook events
+
+**Required Features**:
+- [ ] HMAC signature validation (X-Shopify-Hmac-Sha256 header)
+- [ ] Read webhook headers (X-Shopify-Topic, X-Shopify-Shop-Domain)
+- [ ] Handle 4 webhook topics:
+  - `products/create` → Create product in DB
+  - `products/update` → Update product in DB
+  - `orders/create` → Create order in DB
+  - `orders/updated` → Update order in DB
+- [ ] Save webhook events to `WebhookEvent` table (bonus)
+- [ ] Idempotency (bonus) - prevent duplicate processing
+
+**Key Technical Details**:
+- Webhook endpoint needs **raw body** for HMAC validation (not JSON parsed)
+- HMAC calculation: `crypto.createHmac('sha256', SHOPIFY_API_SECRET).update(rawBody).digest('base64')`
+- Compare with `X-Shopify-Hmac-Sha256` header
+- Webhook URL format: `{WEBHOOK_BASE_URL}/webhooks/shopify`
+
+**Files to Implement**:
+- `src/modules/webhooks/webhooks.controller.ts` - Currently returns 501
+- `src/modules/webhooks/webhooks.service.ts` - Create this file
+- `src/modules/webhooks/webhooks.repository.ts` - Create this file (optional, can use shopifyRepository)
+
+---
+
+### E) Query Endpoints ❌ **NOT IMPLEMENTED**
+**Required Routes**:
+- [ ] `GET /products?limit=&cursor=&shop=` - List products with pagination
+- [ ] `GET /orders?limit=&cursor=&shop=` - List orders with pagination
+
+**Required Features**:
+- [ ] Cursor-based pagination (not offset-based)
+- [ ] Filter by shop domain (optional query param)
+- [ ] Limit results (default and max)
+- [ ] Return format: `{ products: [], nextCursor: string, hasMore: boolean, count: number }`
+- [ ] Protected with `requireAuth` (both USER and ADMIN can access)
+
+**Files to Implement**:
+- `src/modules/products/products.controller.ts` - Currently returns 501
+- `src/modules/products/products.service.ts` - Create this file
+- `src/modules/products/products.repository.ts` - Create this file
+- `src/modules/orders/orders.controller.ts` - Currently returns 501
+- `src/modules/orders/orders.service.ts` - Create this file
+- `src/modules/orders/orders.repository.ts` - Create this file
+
+**Pagination Strategy**:
+- Use Prisma's `cursor` pagination with `id` field
+- Example: `prisma.product.findMany({ take: limit, cursor: cursor ? { id: cursor } : undefined, skip: cursor ? 1 : 0 })`
+
+---
+
+### F) Dashboard ❌ **NOT IMPLEMENTED**
+**Required Route**:
+- [ ] `GET /dashboard` (ADMIN only)
+
+**Required Features**:
+- [ ] Total products count
+- [ ] Total orders count
+- [ ] Orders in last 24 hours
+- [ ] Protected with `requireAuth` + `requireRole("ADMIN")`
+
+**Files to Implement**:
+- `src/modules/dashboard/dashboard.controller.ts` - Currently returns 501
+- `src/modules/dashboard/dashboard.service.ts` - Create this file
+- `src/modules/dashboard/dashboard.repository.ts` - Create this file (optional)
+
+**Database Queries**:
+```typescript
+// Total products
+const totalProducts = await prisma.product.count();
+
+// Total orders
+const totalOrders = await prisma.order.count();
+
+// Orders last 24h
+const last24h = new Date(Date.now() - 24 * 60 * 60 * 1000);
+const recentOrders = await prisma.order.count({
+  where: {
+    createdAtShopify: { gte: last24h }
+  }
+});
+```
+
+---
+
+## 🎯 Implementation Priority
+
+### High Priority (Required)
+1. **Webhooks** (D) - Critical for real-time updates
+2. **Query Endpoints** (E) - Core functionality for users
+3. **Dashboard** (F) - Required for ADMIN users
+
+### Bonus Features (Optional)
+- Webhook idempotency (prevent duplicate processing)
+- WebhookEvent table logging (already in schema)
+- Docker Compose setup (already have docker-compose.yml)
+- Unit tests for auth and webhook HMAC validation
+
+---
+
+## 🔑 Key Learnings & Best Practices
+
+### Shopify OAuth
+1. Always use `application/x-www-form-urlencoded` for token exchange
+2. Keep ngrok URL and Shopify app config in sync
+3. Restart server after `.env` changes
+4. Use OAuth tokens, not private app tokens
+5. App URL = base URL, Redirect URL = callback endpoint
+
+### API Parameters
+- Products: Use `published_status` (not `status`)
+- Orders: Use `status: "any"` (correct)
+- Always set `limit: 250` for maximum results
+
+### Error Handling
+- Custom error classes extend `AppError`
+- Global error handler catches all errors
+- Express 5 handles async errors natively
+- Zod validation errors are caught automatically
+
+### Code Organization
+- Layered architecture: Controller → Service → Repository
+- Separation of concerns
+- Type safety with Zod schemas
+- No `as` assertions, use `z.infer<typeof schema>`
+
+---
+
+## 📝 Environment Variables Required
+
+```env
+# Database
+DATABASE_URL="postgresql://postgres:postgres@localhost:5432/shopify_live"
+
+# JWT
+JWT_SECRET="your-super-secret-jwt-key-change-this"
+
+# Server
+PORT=3000
+
+# Shopify OAuth
+SHOPIFY_API_KEY="your-api-key"
+SHOPIFY_API_SECRET="your-api-secret"
+SHOPIFY_SCOPES="read_products,write_products,read_orders,write_orders"
+SHOPIFY_REDIRECT_URI="https://your-ngrok-url.ngrok-free.app/shopify/callback"
+
+# Webhooks
+WEBHOOK_BASE_URL="https://your-ngrok-url.ngrok-free.app"
+```
+
+---
+
+## 🚀 Next Steps
+
+1. **Implement Webhooks** (highest priority)
+   - Register webhooks endpoint
+   - Webhook receiver with HMAC validation
+   - Handle 4 webhook topics
+   - Save to WebhookEvent table
+
+2. **Implement Query Endpoints**
+   - Products list with pagination
+   - Orders list with pagination
+   - Filter by shop
+
+3. **Implement Dashboard**
+   - Count queries
+   - Last 24h orders filter
+
+4. **Testing**
+   - Test all endpoints with HTTP REST client
+   - Verify webhook HMAC validation
+   - Test pagination edge cases
+
+5. **Documentation**
+   - Update README with setup instructions
+   - Add webhook setup guide
+   - Add ngrok configuration guide

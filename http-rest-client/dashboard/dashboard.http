@@ -1,0 +1,6 @@
+@baseUrl = http://localhost:3000
+@token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJjbWs3aWQ3dWEwMDAwMWpoc3pvN2k2bjRiIiwicm9sZSI6IkFETUlOIiwiaWF0IjoxNzY4MDM5MTQwLCJleHAiOjE3NjgwNjc5NDB9.iZ303HO88y4aOT3eTAfddJiEUOuylZzMIpVCu9Cpxuw
+
+### Get Dashboard
+GET {{baseUrl}}/dashboard
+Authorization: Bearer {{token}}

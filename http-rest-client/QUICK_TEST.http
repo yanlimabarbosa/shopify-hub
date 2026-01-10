@@ -1,0 +1,53 @@
+@baseUrl = http://localhost:3000
+
+### 1. Register Admin
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "name": "Admin User",
+  "email": "admin@example.com",
+  "password": "admin123456"
+}
+
+### 2. Login
+# @name login
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "admin@example.com",
+  "password": "admin123456"
+}
+
+### 3. Get Profile
+@token = {{login.response.body.token}}
+GET {{baseUrl}}/auth/me
+Authorization: Bearer {{token}}
+
+### 4. Shopify OAuth (open in browser)
+GET {{baseUrl}}/shopify/auth?shop=YOUR_SHOP.myshopify.com
+
+### 5. Sync Products
+POST {{baseUrl}}/sync/products
+Authorization: Bearer {{token}}
+
+### 6. Sync Orders
+POST {{baseUrl}}/sync/orders
+Authorization: Bearer {{token}}
+
+### 7. Get Products
+GET {{baseUrl}}/products?limit=10
+Authorization: Bearer {{token}}
+
+### 8. Get Orders
+GET {{baseUrl}}/orders?limit=10
+Authorization: Bearer {{token}}
+
+### 9. Dashboard
+GET {{baseUrl}}/dashboard
+Authorization: Bearer {{token}}
+
+### 10. Register Webhooks
+POST {{baseUrl}}/webhooks/register
+Authorization: Bearer {{token}}

@@ -1,0 +1,10 @@
+@baseUrl = http://localhost:3000
+@token = YOUR_TOKEN_HERE
+
+### Get Orders
+GET {{baseUrl}}/orders?limit=10
+Authorization: Bearer {{token}}
+
+### Get Orders with Pagination
+GET {{baseUrl}}/orders?limit=5&cursor=YOUR_CURSOR
+Authorization: Bearer {{token}}

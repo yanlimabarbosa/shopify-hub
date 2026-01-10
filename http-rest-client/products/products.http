@@ -1,0 +1,17 @@
+@baseUrl = http://localhost:3000
+@token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJjbWs3aWQ3dWEwMDAwMWpoc3pvN2k2bjRiIiwicm9sZSI6IkFETUlOIiwiaWF0IjoxNzY4MDM1MjEyLCJleHAiOjE3NjgwNjQwMTJ9.jzfc1Fg-fNygmkG3CXPSLFAdouWW8qar9Mn_hQWljzo
+
+@shop = yan-store-8959.myshopify.com
+
+### Get Products (First Page)
+GET {{baseUrl}}/products?limit=5
+Authorization: Bearer {{token}}
+
+### Get Products with Pagination (Use nextCursor from previous response)
+# Replace YOUR_CURSOR with the nextCursor value from the previous response
+GET {{baseUrl}}/products?limit=5&cursor=cmk7x4rno000hqw7ehxebkq53
+Authorization: Bearer {{token}}
+
+### Get Products filtered by Shop
+GET {{baseUrl}}/products?limit=10&shop={{shop}}
+Authorization: Bearer {{token}}

@@ -1,0 +1,4 @@
+@baseUrl = http://localhost:3000
+
+### Start OAuth (open in browser)
+GET {{baseUrl}}/shopify/auth?shop=YOUR_SHOP.myshopify.com
