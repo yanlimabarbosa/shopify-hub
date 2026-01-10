@@ -6,6 +6,4 @@ import { registerWebhooks, receiveWebhook } from "./webhooks.controller.js";
 export const webhooksRouter = Router();
 
 webhooksRouter.post("/register", requireAuth, requireRole("ADMIN"), registerWebhooks);
-
-// IMPORTANT: this should use raw body parser for HMAC validation
 webhooksRouter.post("/shopify", receiveWebhook);

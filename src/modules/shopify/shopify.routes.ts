@@ -5,5 +5,5 @@ import { authStart, authCallback } from "./shopify.controller.js";
 
 export const shopifyRouter = Router();
 
-shopifyRouter.get("/auth", requireAuth, requireRole("ADMIN"), authStart);
+shopifyRouter.get("/auth", authStart);
 shopifyRouter.get("/callback", authCallback);

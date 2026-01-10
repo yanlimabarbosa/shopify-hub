@@ -1,38 +1,24 @@
 import { Request, Response } from "express";
-import crypto from "crypto";
-import { prisma } from "../../config/prisma.js";
+import { shopifyService } from "./shopify.service.js";
+import { authStartSchema, authCallbackSchema } from "./shopify.types.js";
+import type { AuthStartInput, AuthCallbackInput } from "./shopify.types.js";
 
-/**
- * TODO (candidato):
- * Implementar OAuth Shopify:
- * - /shopify/auth?shop=...
- *   - gerar state
- *   - redirecionar para authorize URL
- * - /shopify/callback
- *   - validar state + HMAC (querystring) se desejar
- *   - trocar code por access_token via Shopify
- *   - salvar/atualizar Shop no DB
- */
-export async function authStart(req: Request, res: Response) {
-  const shop = String(req.query.shop || "");
-  if (!shop.endsWith(".myshopify.com")) return res.status(400).json({ error: "Invalid shop domain" });
-
-  const state = crypto.randomBytes(16).toString("hex");
-  // TODO: persistir state (cookie/sessão/DB) para validação
-  const apiKey = process.env.SHOPIFY_API_KEY!;
-  const scopes = process.env.SHOPIFY_SCOPES!;
-  const redirectUri = process.env.SHOPIFY_REDIRECT_URI!;
-
-  const url = new URL(`https://${shop}/admin/oauth/authorize`);
-  url.searchParams.set("client_id", apiKey);
-  url.searchParams.set("scope", scopes);
-  url.searchParams.set("redirect_uri", redirectUri);
-  url.searchParams.set("state", state);
-
-  return res.redirect(url.toString());
+export async function authStart(req: Request, res: Response): Promise<void> {
+  const validatedInput: AuthStartInput = authStartSchema.parse(req.query);
+  const oauthUrl = shopifyService.generateOAuthUrl(validatedInput);
+  res.redirect(oauthUrl);
 }
 
-export async function authCallback(req: Request, res: Response) {
-  // TODO: trocar code por token e salvar no banco
-  return res.status(501).json({ todo: "Implement Shopify OAuth callback" });
+export async function authCallback(req: Request, res: Response): Promise<Response> {
+  const validatedInput: AuthCallbackInput = authCallbackSchema.parse(req.query);
+  const shop = await shopifyService.completeOAuth(validatedInput);
+
+  return res.json({
+    message: "Shopify app installed successfully",
+    shop: {
+      shopDomain: shop.shopDomain,
+      scopes: shop.scopes,
+      installedAt: shop.installedAt,
+    },
+  });
 }
