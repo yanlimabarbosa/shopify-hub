@@ -5,7 +5,7 @@ dotenv.config();
 
 const envSchema = z.object({
   // Database
-  DATABASE_URL: z.string().url("DATABASE_URL must be a valid URL"),
+  DATABASE_URL: z.string().url({ message: "DATABASE_URL must be a valid URL" }).transform((url) => url.replace(/\/+$/, "")),
 
   // JWT
   JWT_SECRET: z.string().min(32, "JWT_SECRET must be at least 32 characters"),
@@ -18,13 +18,13 @@ const envSchema = z.object({
   SHOPIFY_API_KEY: z.string().min(1, "SHOPIFY_API_KEY is required"),
   SHOPIFY_API_SECRET: z.string().min(1, "SHOPIFY_API_SECRET is required"),
   SHOPIFY_SCOPES: z.string().min(1, "SHOPIFY_SCOPES is required"),
-  SHOPIFY_REDIRECT_URI: z.string().url("SHOPIFY_REDIRECT_URI must be a valid URL"),
+  SHOPIFY_REDIRECT_URI: z.string().url({ message: "SHOPIFY_REDIRECT_URI must be a valid URL" }).transform((url) => url.replace(/\/+$/, "")),
 
   // Webhooks
-  WEBHOOK_BASE_URL: z.string().url("WEBHOOK_BASE_URL must be a valid URL"),
+  WEBHOOK_BASE_URL: z.string().url({ message: "WEBHOOK_BASE_URL must be a valid URL" }).transform((url) => url.replace(/\/+$/, "")),
 
   // Frontend (optional)
-  FRONTEND_URL: z.string().url("FRONTEND_URL must be a valid URL").optional(),
+  FRONTEND_URL: z.string().url({ message: "FRONTEND_URL must be a valid URL" }).transform((url) => url.replace(/\/+$/, "")).optional(),
 
   // Logging (optional)
   LOG_LEVEL: z.enum(["debug", "info", "warn", "error"]).optional(),
