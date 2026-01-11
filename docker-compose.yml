@@ -23,7 +23,6 @@ services:
     container_name: shopify-hub-backend
     ports:
       - "3000:3000"
-      - "5555:5555"
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-shopify_live}?schema=public
       PORT: ${PORT:-3000}
@@ -59,11 +58,30 @@ services:
     ports:
       - "8080:8080"
     environment:
-      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:3000}
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8080}
     env_file:
       - .env
     depends_on:
       backend:
+        condition: service_healthy
+    networks:
+      - shopify-network
+    restart: unless-stopped
+
+  prisma-studio:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: shopify-hub-prisma-studio
+    command: ["npx", "prisma", "studio", "--hostname", "0.0.0.0", "--port", "5555"]
+    ports:
+      - "5555:5555"
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-shopify_live}?schema=public
+    env_file:
+      - .env
+    depends_on:
+      db:
         condition: service_healthy
     networks:
       - shopify-network

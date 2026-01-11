@@ -14,6 +14,43 @@ A aplicação é composta por um backend em Node.js/Express com TypeScript e um 
 
 ---
 
+## Variáveis de Ambiente
+
+A aplicação requer as seguintes variáveis de ambiente configuradas no arquivo `.env` na raiz do projeto. A seção **Guia de Configuração** abaixo explica detalhadamente como obter cada uma delas.
+
+### Autenticação
+- **`JWT_SECRET`** - Chave secreta para assinatura de tokens JWT (mínimo 32 caracteres). Gere uma string aleatória segura:
+  ```bash
+  openssl rand -base64 32
+  ```
+
+### Shopify OAuth
+- **`SHOPIFY_API_KEY`** - Client ID do app Shopify (obtido no Partner Dashboard)
+- **`SHOPIFY_API_SECRET`** - Client Secret do app Shopify (obtido no Partner Dashboard)
+- **`SHOPIFY_SCOPES`** - Permissões necessárias (ex: `read_products,write_products,read_orders,write_orders,write_webhooks`)
+- **`SHOPIFY_REDIRECT_URI`** - URL de callback do OAuth (formato: `https://seu-ngrok-url.ngrok-free.app/shopify/callback`)
+
+### Webhooks
+- **`WEBHOOK_BASE_URL`** - URL base para recebimento de webhooks (formato: `https://seu-ngrok-url.ngrok-free.app`)
+
+### Frontend
+- **`NEXT_PUBLIC_API_URL`** - URL da API backend (usada pelo frontend no navegador)
+- **`FRONTEND_URL`** - URL do frontend (usada pelo backend para CORS e redirecionamentos)
+
+### Servidor
+- **`PORT`** - Porta do servidor backend (padrão: `3000`)
+- **`NODE_ENV`** - Ambiente de execução (`development`, `production`, ou `test`)
+- **`LOG_LEVEL`** - Nível de log (`debug`, `info`, `warn`, `error`)
+
+### Banco de Dados
+- **`POSTGRES_USER`** - Usuário do PostgreSQL (padrão: `postgres`)
+- **`POSTGRES_PASSWORD`** - Senha do PostgreSQL (padrão: `postgres`)
+- **`POSTGRES_DB`** - Nome do banco de dados (padrão: `shopify_live`)
+
+> **Nota:** O `DATABASE_URL` é construído automaticamente pelo Docker Compose a partir das variáveis acima. Para desenvolvimento local fora do Docker, você pode definir `DATABASE_URL` manualmente.
+
+---
+
 # Guia de Configuração
 
 ## 1. Configurar ngrok
@@ -103,15 +140,10 @@ Após isso você será redirecionado para a tela do Partner Dashboard:
 
 Execute no terminal:
 ```bash
-docker-compose up -d --build
+docker-compose up -d
 ```
 
-Caso queira visualizar o banco de dados de forma rápida, rode o comando:
-```bash
-docker exec -it shopify-hub-backend npx prisma studio
-```
-
-Depois acesse [http://localhost:5555](http://localhost:5555) no navegador.
+Caso queira visualizar o banco de dados de forma rápida, acesse [http://localhost:5555](http://localhost:5555) no navegador (prisma studio).
 
 ---
 
