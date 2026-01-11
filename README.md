@@ -245,65 +245,65 @@ A partir de agora, todos os novos produtos e pedidos criados diretamente no Shop
 ## ✅ Checklist de Requisitos
 
 ### A) Autenticação e Autorização ✅
-- [x] JWT access token implementado
-- [x] Roles: `ADMIN` e `USER` implementados
-- [x] `POST /auth/register` - Registro de usuários
-- [x] `POST /auth/login` - Login com JWT
-- [x] `GET /me` - Endpoint para obter dados do usuário autenticado
-- [x] Middleware de autenticação (`requireAuth`)
-- [x] Middleware de autorização por role (`requireRole`)
-- [x] `ADMIN` pode: sync + registrar webhooks + dashboard
-- [x] `USER` pode: consultas (products/orders) + /me
-- [x] Hash de senha com `bcrypt`
+- ✅ JWT access token implementado
+- ✅ Roles: `ADMIN` e `USER` implementados
+- ✅ `POST /auth/register` - Registro de usuários
+- ✅ `POST /auth/login` - Login com JWT
+- ✅ `GET /me` - Endpoint para obter dados do usuário autenticado
+- ✅ Middleware de autenticação (`requireAuth`)
+- ✅ Middleware de autorização por role (`requireRole`)
+- ✅ `ADMIN` pode: sync + registrar webhooks + dashboard
+- ✅ `USER` pode: consultas (products/orders) + /me
+- ✅ Hash de senha com `bcrypt`
 
 ### B) Shopify OAuth (App) ✅
-- [x] `GET /shopify/auth?shop=xxxxx.myshopify.com` - Iniciar fluxo OAuth
-- [x] `GET /shopify/callback` - Callback OAuth
-- [x] Persistência no banco:
-  - [x] `shopDomain`
-  - [x] `accessToken`
-  - [x] `scopes`
-  - [x] `installedAt`
+- ✅ `GET /shopify/auth?shop=xxxxx.myshopify.com` - Iniciar fluxo OAuth
+- ✅ `GET /shopify/callback` - Callback OAuth
+- ✅ Persistência no banco:
+  - ✅ `shopDomain`
+  - ✅ `accessToken`
+  - ✅ `scopes`
+  - ✅ `installedAt`
 
 ### C) Sincronização Shopify → Banco (ADMIN) ✅
-- [x] `POST /sync/products` - Sincronizar produtos
-- [x] `POST /sync/orders` - Sincronizar pedidos
-- [x] Busca na Shopify Admin API
-- [x] Salvar/atualizar com **upsert** por `shopifyId` + `shopId`
-- [x] Campos mínimos de Produtos: `shopifyId`, `title`, `status`, `vendor`, `createdAtShopify`, `updatedAtShopify`
-- [x] Campos mínimos de Pedidos: `shopifyId`, `name`, `totalPrice`, `currency`, `financialStatus`, `createdAtShopify`, `updatedAtShopify`
+- ✅ `POST /sync/products` - Sincronizar produtos
+- ✅ `POST /sync/orders` - Sincronizar pedidos
+- ✅ Busca na Shopify Admin API
+- ✅ Salvar/atualizar com **upsert** por `shopifyId` + `shopId`
+- ✅ Campos mínimos de Produtos: `shopifyId`, `title`, `status`, `vendor`, `createdAtShopify`, `updatedAtShopify`
+- ✅ Campos mínimos de Pedidos: `shopifyId`, `name`, `totalPrice`, `currency`, `financialStatus`, `createdAtShopify`, `updatedAtShopify`
 
 ### D) Webhooks via ngrok ✅
-- [x] `POST /webhooks/register` (ADMIN) - Criar webhooks na Shopify
-- [x] `POST /webhooks/shopify` (público) - Receber eventos
-- [x] Webhooks implementados:
-  - [x] `products/create`
-  - [x] `products/update`
-  - [x] `orders/create`
-  - [x] `orders/updated`
-- [x] Validação de assinatura HMAC do webhook
+- ✅ `POST /webhooks/register` (ADMIN) - Criar webhooks na Shopify
+- ✅ `POST /webhooks/shopify` (público) - Receber eventos
+- ✅ Webhooks implementados:
+  - ✅ `products/create`
+  - ✅ `products/update`
+  - ✅ `orders/create`
+  - ✅ `orders/updated`
+- ✅ Validação de assinatura HMAC do webhook
 
 ### E) Consultas (USER/ADMIN) ✅
-- [x] `GET /products?limit=&cursor=` - Listar produtos com paginação
-- [x] `GET /orders?limit=&cursor=` - Listar pedidos com paginação
+- ✅ `GET /products?limit=&cursor=` - Listar produtos com paginação
+- ✅ `GET /orders?limit=&cursor=` - Listar pedidos com paginação
 
 ### F) Dashboard (ADMIN) ✅
-- [x] `GET /dashboard` - Endpoint de dashboard
-- [x] Retorna contadores:
-  - [x] Total de produtos
-  - [x] Total de pedidos
-  - [x] Pedidos nas últimas 24h
+- ✅ `GET /dashboard` - Endpoint de dashboard
+- ✅ Retorna contadores:
+  - ✅ Total de produtos
+  - ✅ Total de pedidos
+  - ✅ Pedidos nas últimas 24h
 
 ### Bônus ✅
-- [x] **Idempotência de webhook** - Prevenção de processamento duplicado
-- [x] **Tabela `webhook_events`** - Salvando `topic` + payload
-- [x] **Docker compose** - App + PostgreSQL containerizados
-- [x] **Frontend completo** - Interface moderna em Next.js
-- [x] **Swagger/OpenAPI** - Documentação da API em localhost:3000/api-docs
-- [x] **TypeScript** - Tipagem completa
-- [x] **Validação com Zod** - Schemas de validação
-- [x] **Tratamento de erros centralizado** - Middleware de error handling
-- [x] **Logging estruturado** - Sistema de logs
+- ✅ **Idempotência de webhook** - Prevenção de processamento duplicado
+- ✅ **Tabela `webhook_events`** - Salvando `topic` + payload
+- ✅ **Docker compose** - App + PostgreSQL containerizados
+- ✅ **Frontend completo** - Interface moderna em Next.js
+- ✅ **Swagger/OpenAPI** - Documentação da API em localhost:3000/api-docs
+- ✅ **TypeScript** - Tipagem completa
+- ✅ **Validação com Zod** - Schemas de validação
+- ✅ **Tratamento de erros centralizado** - Middleware de error handling
+- ✅ **Logging estruturado** - Sistema de logs
 
 ---
 
