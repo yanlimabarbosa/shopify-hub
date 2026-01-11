@@ -15,7 +15,7 @@ const buttonVariants = cva(
         outline:
           "border bg-background shadow-xs hover:bg-accent hover:text-accent-foreground",
         secondary:
-          "bg-secondary text-secondary-foreground hover:bg-secondary/80",
+          "bg-secondary text-secondary-foreground hover:bg-secondary/90 cursor-pointer transition-colors",
         ghost:
           "hover:bg-accent hover:text-accent-foreground",
         link: "text-primary underline-offset-4 hover:underline",
@@ -30,7 +30,7 @@ const buttonVariants = cva(
       },
     },
     defaultVariants: {
-      variant: "default",
+      variant: "secondary",
       size: "default",
     },
   }
@@ -38,7 +38,7 @@ const buttonVariants = cva(
 
 function Button({
   className,
-  variant = "default",
+  variant = "secondary",
   size = "default",
   asChild = false,
   ...props
