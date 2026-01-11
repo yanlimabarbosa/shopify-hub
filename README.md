@@ -12,6 +12,14 @@ O **Shopify Hub** é uma aplicação web que permite gerenciar e sincronizar pro
 
 A aplicação é composta por um backend em Node.js/Express com TypeScript e um frontend em Next.js, tudo containerizado com Docker para facilitar o deploy e desenvolvimento.
 
+### Portas dos Serviços
+
+Após iniciar a aplicação com Docker Compose, os seguintes serviços estarão disponíveis:
+
+- **Porta 3000** - Backend API (REST API + Swagger em `/api-docs`)
+- **Porta 8080** - Frontend (Interface web da aplicação)
+- **Porta 5555** - Prisma Studio (Visualização e gerenciamento do banco de dados)
+
 ---
 
 ## Variáveis de Ambiente
@@ -143,7 +151,7 @@ Execute no terminal:
 docker-compose up -d
 ```
 
-Caso queira visualizar o banco de dados de forma rápida, acesse [http://localhost:5555](http://localhost:5555) no navegador (prisma studio).
+O Prisma Studio estará disponível automaticamente em [http://localhost:5555](http://localhost:5555) para visualizar e gerenciar o banco de dados.
 
 ---
 
