@@ -1,16 +1,5 @@
 import { z } from "zod";
-
-const extractShopDomain = (value: string): string => {
-  try {
-    if (value.includes("://")) {
-      const url = new URL(value);
-      return url.hostname;
-    }
-    return value;
-  } catch {
-    return value;
-  }
-};
+import { extractShopDomain } from "../../utils/shopify.js";
 
 export const authStartSchema = z.object({
   shop: z

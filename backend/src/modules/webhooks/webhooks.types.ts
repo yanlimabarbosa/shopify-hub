@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { extractShopDomain } from "../../utils/shopify.js";
 
 export const webhookTopics = [
   "products/create",
@@ -56,15 +57,15 @@ export type WebhookEventData = {
 };
 
 export const registerWebhooksBodySchema = z.object({
-  shop: z.string().optional(),
+  shop: z.string().transform(extractShopDomain).optional(),
 });
 
 export const registerWebhooksQuerySchema = z.object({
-  shop: z.string().optional(),
+  shop: z.string().transform(extractShopDomain).optional(),
 });
 
 export const webhookHeadersSchema = z.object({
   "x-shopify-hmac-sha256": z.string(),
   "x-shopify-topic": z.string(),
-  "x-shopify-shop-domain": z.string(),
+  "x-shopify-shop-domain": z.string().transform(extractShopDomain),
 });
