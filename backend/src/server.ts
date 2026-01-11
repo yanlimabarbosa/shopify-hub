@@ -5,6 +5,8 @@ import { errorHandler } from "./shared/middlewares/error-handler.js";
 import { logger } from "./utils/logger.js";
 import { env } from "./config/env.js";
 import { safeJsonParse } from "./utils/axios-error-handler.js";
+import { setupSwagger } from "./config/swagger.js";
+import "./config/swagger-docs.js";
 
 const app = express();
 
@@ -39,6 +41,8 @@ app.use("/webhooks/shopify", express.raw({ type: "application/json" }), (req, re
 });
 
 app.use(express.json());
+
+setupSwagger(app);
 
 app.get("/health", (req, res) => {
   const timestamp = new Date().toISOString();
