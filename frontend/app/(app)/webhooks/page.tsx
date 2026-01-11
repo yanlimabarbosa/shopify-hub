@@ -1,28 +1,20 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRegisterWebhooks } from "@/hooks/use-webhooks";
+import { useRequireAdmin } from "@/hooks/use-require-admin";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { StyledInput } from "@/components/styled-input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Webhook, Loader2, CheckCircle2, XCircle } from "lucide-react";
-import { useAuthStore } from "@/lib/store/auth-store";
-import { useRouter } from "next/navigation";
 
 export default function WebhooksPage() {
-  const router = useRouter();
-  const isAdmin = useAuthStore((state) => state.isAdmin());
+  const isAdmin = useRequireAdmin();
   const [shop, setShop] = useState("");
   const registerWebhooks = useRegisterWebhooks();
-
-  useEffect(() => {
-    if (!isAdmin) {
-      router.push("/dashboard");
-    }
-  }, [isAdmin, router]);
 
   const handleRegister = () => {
     registerWebhooks.mutate(shop || undefined);
@@ -48,7 +40,7 @@ export default function WebhooksPage() {
         <CardContent className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="shop">Domínio da Loja (Opcional)</Label>
-            <Input
+            <StyledInput
               id="shop"
               type="text"
               placeholder="Deixe vazio para registrar em todas as lojas"

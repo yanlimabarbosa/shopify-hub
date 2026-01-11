@@ -5,11 +5,9 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { StyledInput } from "@/components/styled-input";
 import { Label } from "@/components/ui/label";
-import { useAuthStore } from "@/lib/store/auth-store";
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRequireAdmin } from "@/hooks/use-require-admin";
 import { useShopifyAuth } from "@/hooks/use-shopify";
 import { useToast } from "@/hooks/use-toast";
 
@@ -23,16 +21,9 @@ const shopifyAuthSchema = z.object({
 type ShopifyAuthForm = z.infer<typeof shopifyAuthSchema>;
 
 export default function ShopifyPage() {
-  const router = useRouter();
-  const isAdmin = useAuthStore((state) => state.isAdmin());
+  const isAdmin = useRequireAdmin();
   const shopifyAuth = useShopifyAuth();
   const { toast } = useToast();
-
-  useEffect(() => {
-    if (!isAdmin) {
-      router.push("/dashboard");
-    }
-  }, [isAdmin, router]);
 
   const {
     register,
@@ -72,7 +63,7 @@ export default function ShopifyPage() {
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="shop">Domínio da Loja</Label>
-              <Input
+              <StyledInput
                 id="shop"
                 type="text"
                 placeholder="sua-loja.myshopify.com"

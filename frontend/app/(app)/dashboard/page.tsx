@@ -1,23 +1,14 @@
 "use client";
 
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
 import { useDashboard } from "@/hooks/use-dashboard";
+import { useRequireAdmin } from "@/hooks/use-require-admin";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Package, ShoppingCart, TrendingUp } from "lucide-react";
-import { useAuthStore } from "@/lib/store/auth-store";
 
 export default function DashboardPage() {
-  const router = useRouter();
-  const isAdmin = useAuthStore((state) => state.isAdmin());
+  const isAdmin = useRequireAdmin({ redirectTo: "/products" });
   const { data, isLoading, error } = useDashboard();
-
-  useEffect(() => {
-    if (!isAdmin) {
-      router.push("/products");
-    }
-  }, [isAdmin, router]);
 
   if (!isAdmin) {
     return null;
