@@ -1,27 +1,21 @@
-version: '3.8'
-
 services:
-  # PostgreSQL Database
   db:
     image: postgres:16-alpine
     container_name: shopify-hub-db
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: shopify_live
-    ports:
-      - "5432:5432"
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-shopify_live}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
       interval: 10s
       timeout: 5s
       retries: 5
     networks:
       - shopify-network
 
-  # Backend API
   backend:
     build:
       context: ./backend
@@ -29,32 +23,25 @@ services:
     container_name: shopify-hub-backend
     ports:
       - "3000:3000"
-      - "5555:5555"  # Prisma Studio
+      - "5555:5555"
     environment:
-      # Database
-      DATABASE_URL: postgresql://postgres:postgres@db:5432/shopify_live?schema=public
-      
-      # Server
-      PORT: 3000
-      NODE_ENV: production
-      
-      # JWT
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-shopify_live}?schema=public
+      PORT: ${PORT:-3000}
+      NODE_ENV: ${NODE_ENV:-production}
       JWT_SECRET: ${JWT_SECRET:-change_me_in_production_min_32_chars}
-      
-      # Shopify OAuth
       SHOPIFY_API_KEY: ${SHOPIFY_API_KEY}
       SHOPIFY_API_SECRET: ${SHOPIFY_API_SECRET}
       SHOPIFY_SCOPES: ${SHOPIFY_SCOPES:-read_products,read_orders,write_products,write_orders,write_webhooks}
       SHOPIFY_REDIRECT_URI: ${SHOPIFY_REDIRECT_URI:-http://localhost:3000/shopify/callback}
-      
-      # Webhooks
       WEBHOOK_BASE_URL: ${WEBHOOK_BASE_URL}
-      
-      # Frontend
       FRONTEND_URL: ${FRONTEND_URL:-http://localhost:8080}
-      
-      # Logging
       LOG_LEVEL: ${LOG_LEVEL:-info}
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
     env_file:
       - .env
     depends_on:
@@ -64,7 +51,6 @@ services:
       - shopify-network
     restart: unless-stopped
 
-  # Frontend
   frontend:
     build:
       context: ./frontend
@@ -73,14 +59,12 @@ services:
     ports:
       - "8080:8080"
     environment:
-      # Use backend service name for internal Docker networking
-      # For browser requests, use localhost (set in .env)
       NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:3000}
     env_file:
       - .env
     depends_on:
       backend:
-        condition: service_started
+        condition: service_healthy
     networks:
       - shopify-network
     restart: unless-stopped

@@ -31,8 +31,8 @@ WORKDIR /app
 
 ENV NODE_ENV=production
 
-# Install OpenSSL in runner stage as well
-RUN apk add --no-cache openssl libc6-compat
+# Install OpenSSL and wget for healthcheck
+RUN apk add --no-cache openssl libc6-compat wget
 
 # Create non-root user
 RUN addgroup --system --gid 1001 nodejs && \
