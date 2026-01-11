@@ -46,18 +46,20 @@ export function useRegister() {
 
   return useMutation({
     mutationFn: async (data: RegisterInput) => {
-      const response = await apiClient.post<{ user: User; token: string }>("/auth/register", data);
+      const response = await apiClient.post<User & { token: string }>("/auth/register", data);
       return response.data;
     },
     onSuccess: async (data) => {
-      setAuth(data.user, data.token);
-      queryClient.setQueryData(["user"], data.user);
+      // Backend returns { ...user, token } not { user, token }
+      const { token, ...user } = data;
+      setAuth(user, token);
+      queryClient.setQueryData(["user"], user);
       toast({
         title: "Sucesso",
         description: "Conta criada com sucesso",
       });
       // Redirect based on role: ADMIN -> /dashboard, USER -> /products
-      router.push(data.user.role === "ADMIN" ? "/dashboard" : "/products");
+      router.push(user.role === "ADMIN" ? "/dashboard" : "/products");
     },
     onError: (error: any) => {
       toast({

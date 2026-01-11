@@ -1,0 +1,93 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  db:
+    image: postgres:16-alpine
+    container_name: shopify-hub-db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: shopify_live
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - shopify-network
+
+  # Backend API
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: shopify-hub-backend
+    ports:
+      - "3000:3000"
+      - "5555:5555"  # Prisma Studio
+    environment:
+      # Database
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/shopify_live?schema=public
+      
+      # Server
+      PORT: 3000
+      NODE_ENV: production
+      
+      # JWT
+      JWT_SECRET: ${JWT_SECRET:-change_me_in_production_min_32_chars}
+      
+      # Shopify OAuth
+      SHOPIFY_API_KEY: ${SHOPIFY_API_KEY}
+      SHOPIFY_API_SECRET: ${SHOPIFY_API_SECRET}
+      SHOPIFY_SCOPES: ${SHOPIFY_SCOPES:-read_products,read_orders,write_products,write_orders,write_webhooks}
+      SHOPIFY_REDIRECT_URI: ${SHOPIFY_REDIRECT_URI:-http://localhost:3000/shopify/callback}
+      
+      # Webhooks
+      WEBHOOK_BASE_URL: ${WEBHOOK_BASE_URL}
+      
+      # Frontend
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:8080}
+      
+      # Logging
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+    env_file:
+      - .env
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - shopify-network
+    restart: unless-stopped
+
+  # Frontend
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: shopify-hub-frontend
+    ports:
+      - "8080:8080"
+    environment:
+      # Use backend service name for internal Docker networking
+      # For browser requests, use localhost (set in .env)
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:3000}
+    env_file:
+      - .env
+    depends_on:
+      backend:
+        condition: service_started
+    networks:
+      - shopify-network
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+
+networks:
+  shopify-network:
+    driver: bridge

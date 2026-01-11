@@ -1,0 +1,31 @@
+# Git
+.git
+.gitignore
+
+# Documentation
+*.md
+!README.md
+
+# Environment files
+.env
+.env.local
+
+# IDE
+.vscode
+.idea
+
+# Logs
+*.log
+server.log
+
+# Testing
+coverage
+
+# Development
+node_modules
+dist
+http-rest-client
+*.http
+
+# Misc
+tsconfig.tsbuildinfo
