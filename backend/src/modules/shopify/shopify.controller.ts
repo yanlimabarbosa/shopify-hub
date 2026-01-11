@@ -40,3 +40,8 @@ export async function authCallback(req: Request, res: Response): Promise<Respons
     res.redirect(redirectUrl.toString());
   }
 }
+
+export async function getAllShops(req: Request, res: Response): Promise<Response> {
+  const shops = await shopifyService.getAllShops();
+  return res.json(shops);
+}

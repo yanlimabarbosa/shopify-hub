@@ -188,6 +188,10 @@ export class ShopifyService {
       return handleAxiosError(error, "Orders sync", ShopifyAPIError);
     }
   }
+
+  async getAllShops() {
+    return shopifyRepository.getAllShops();
+  }
 }
 
 export const shopifyService = new ShopifyService();

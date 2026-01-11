@@ -39,6 +39,17 @@ export class ShopifyRepository {
     });
   }
 
+  async getAllShops() {
+    return prisma.shop.findMany({
+      select: {
+        id: true,
+        shopDomain: true,
+        installedAt: true,
+      },
+      orderBy: { shopDomain: "asc" },
+    });
+  }
+
   async upsertProduct(data: {
     shopifyId: string;
     shopId: string;
